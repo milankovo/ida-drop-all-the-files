@@ -4,11 +4,24 @@ from functools import cache
 from pathlib import Path
 
 import idaapi
-from PySide6 import QtCore, QtGui, QtWidgets
+__QT_IS_AVAILABLE: bool = True
+try:
+    # IDA 9.2+ uses PySide6 while earlier versions use PyQt5
+    from PySide6 import QtCore, QtGui, QtWidgets # type: ignore[import-untyped, import-not-found] 
+except ImportError:
+    try:
+        from PyQt5 import QtCore, QtGui, QtWidgets # type: ignore[import-untyped, import-not-found]
+    except NotImplementedError:
+        __QT_IS_AVAILABLE = False
 
-logger = logging.getLogger("drop_all_the_files")
-logger.setLevel(logging.INFO)
-
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO) # This is the level that is actually used
+_console_handler = logging.StreamHandler()
+_console_handler.setLevel(logging.INFO)
+_console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(module)s.%(funcName)s:%(lineno)d - %(message)s'))
+if logger.handlers:
+    logger.removeHandler(logger.handlers[0]) # When you importlib.reload() a module, we need to clear out the old logger
+logger.addHandler(_console_handler)
 
 def replace_in_path(path: str, old: str, new: str) -> str:
     match os.name:
@@ -17,7 +30,8 @@ def replace_in_path(path: str, old: str, new: str) -> str:
         case "nt":
             import re
 
-            return re.sub(old, new, path, flags=re.IGNORECASE)
+            logger.debug(f"Replacing '{old}' with '{new}' in '{path}'")
+            return re.sub(re.escape(old), re.escape(new), path, flags=re.IGNORECASE)
         case _:
             return path.replace(old, new)
 
@@ -568,7 +582,8 @@ class drop_all_the_files_plugin_t(idaapi.plugin_t):
         addon.version = "1.2.0"
         idaapi.register_addon(addon)
 
-        self.install_drop_filter()
+        self.filter = None
+        idaapi.register_timer(1_000, self.install_drop_filter)
         self.register_actions()
         return idaapi.PLUGIN_KEEP
 
@@ -577,8 +592,11 @@ class drop_all_the_files_plugin_t(idaapi.plugin_t):
         if main_window:
             self.filter = FileDropFilter()
             main_window.installEventFilter(self.filter)
+            logger.info("Installed drop filter OK")
+            return -1 # No more tries
         else:
-            self.filter = None
+            logger.error("No main window found")
+            return 1_000 # Try again in 1 second
 
     def register_actions(self):
         recent_action = idaapi.action_desc_t(
