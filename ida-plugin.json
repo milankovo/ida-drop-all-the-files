@@ -1,15 +1,38 @@
 {
     "IDAMetadataDescriptorVersion": 1,
     "plugin": {
-        "name": "Drop All The Files",
-        "version": "1.2.0",
+        "name": "drop-all-the-files",
+        "version": "1.3.0",
         "description": "A plugin for smart handling of files dropped into IDA.",
+        "license": "MIT",
         "categories": [
             "collaboration-and-productivity",
             "file-parsers-and-loaders"
         ],
+        "keywords": [
+            "drag-and-drop",
+            "file-handling",
+            "productivity",
+            "automation",
+            "scripts"
+        ],
         "entryPoint": "drop_all_the_files.py",
-        "idaVersions": ">=9.2",
-        "logoPath": "logo.png"
+        "idaVersions": ">=9.1",
+        "platforms": [
+            "windows-x86_64",
+            "linux-x86_64",
+            "macos-x86_64",
+            "macos-aarch64"
+        ],
+        "logoPath": "logo.png",
+        "urls": {
+            "repository": "https://github.com/milankovo/ida-drop-all-the-files"
+        },
+        "authors": [
+            {
+                "name": "Milankovo",
+                "email": "ida-drop-all-the-files@noreply.github.com"
+            }
+        ]
     }
 }

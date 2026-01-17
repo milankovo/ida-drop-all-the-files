@@ -4,24 +4,32 @@ from functools import cache
 from pathlib import Path
 
 import idaapi
+
 __QT_IS_AVAILABLE: bool = True
 try:
     # IDA 9.2+ uses PySide6 while earlier versions use PyQt5
-    from PySide6 import QtCore, QtGui, QtWidgets # type: ignore[import-untyped, import-not-found] 
+    from PySide6 import QtCore, QtGui, QtWidgets  # type: ignore[import-untyped, import-not-found]
 except ImportError:
     try:
-        from PyQt5 import QtCore, QtGui, QtWidgets # type: ignore[import-untyped, import-not-found]
+        from PyQt5 import QtCore, QtGui, QtWidgets  # type: ignore[import-untyped, import-not-found]
     except NotImplementedError:
         __QT_IS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO) # This is the level that is actually used
+logger.setLevel(logging.INFO)  # This is the level that is actually used
 _console_handler = logging.StreamHandler()
 _console_handler.setLevel(logging.INFO)
-_console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(module)s.%(funcName)s:%(lineno)d - %(message)s'))
+_console_handler.setFormatter(
+    logging.Formatter(
+        "[%(levelname)s] %(module)s.%(funcName)s:%(lineno)d - %(message)s"
+    )
+)
 if logger.handlers:
-    logger.removeHandler(logger.handlers[0]) # When you importlib.reload() a module, we need to clear out the old logger
+    logger.removeHandler(
+        logger.handlers[0]
+    )  # When you importlib.reload() a module, we need to clear out the old logger
 logger.addHandler(_console_handler)
+
 
 def replace_in_path(path: str, old: str, new: str) -> str:
     match os.name:
@@ -431,7 +439,7 @@ def execute_python_script(file_path):
 
 
 def handle_idc(file_path):
-    print(f"Handling dropped script file: {file_path}")
+    logger.info(f"Handling dropped script file: {file_path}")
     v = idaapi.idc_value_t()
     v.clear()
     args = idaapi.idc_value_t()
@@ -522,7 +530,7 @@ class FileDropFilter(QtCore.QObject):
         v = False
         try:
             if event.type() == QtCore.QEvent.Type.Drop:
-                print(f"Drop on {obj} {event.mimeData().urls()}")
+                logger.debug(f"Drop on {obj} {event.mimeData().urls()}")
                 handled = self.on_drop(obj, event)
                 if handled:
                     event.acceptProposedAction()
@@ -530,7 +538,7 @@ class FileDropFilter(QtCore.QObject):
 
             v = super().eventFilter(obj, event)
         except Exception as e:
-            print(f"Exception in eventFilter: {e}")
+            logger.error(f"Exception in eventFilter: {e}")
             import traceback
 
             traceback.print_exc()
@@ -577,9 +585,9 @@ class drop_all_the_files_plugin_t(idaapi.plugin_t):
         addon = idaapi.addon_info_t()
         addon.id = "milankovo.drop_all_the_files"
         addon.name = "Drop All The Files"
-        addon.producer = "Milanek"
+        addon.producer = "Milankovo"
         addon.url = "https://github.com/milankovo/ida-drop-all-the-files"
-        addon.version = "1.2.0"
+        addon.version = "1.3.0"
         idaapi.register_addon(addon)
 
         self.filter = None
@@ -592,11 +600,11 @@ class drop_all_the_files_plugin_t(idaapi.plugin_t):
         if main_window:
             self.filter = FileDropFilter()
             main_window.installEventFilter(self.filter)
-            logger.info("Installed drop filter OK")
-            return -1 # No more tries
+            logger.debug("Installed drop filter OK")
+            return -1  # No more tries
         else:
             logger.error("No main window found")
-            return 1_000 # Try again in 1 second
+            return 1_000  # Try again in 1 second
 
     def register_actions(self):
         recent_action = idaapi.action_desc_t(
