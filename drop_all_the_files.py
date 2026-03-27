@@ -427,15 +427,11 @@ def handle_dropped_file(file_path: Path, shift_pressed: bool = False) -> bool:
 
 
 def execute_python_script(file_path):
-    try:
-        source_code = file_path.read_text(encoding="utf-8")
-        compiled_code = compile(source_code, str(file_path), "exec")
-        exec(compiled_code)
-    except Exception as e:
-        logger.error(f"Error executing Python script {file_path}: {e}")
-        import traceback
+    import __main__
 
-        traceback.print_exc()
+    err = idaapi.IDAPython_ExecScript(str(file_path), __main__.__dict__)
+    if err is not None:
+        logger.error(f"Error executing Python script {file_path}: {err}")
 
 
 def handle_idc(file_path):
@@ -587,7 +583,7 @@ class drop_all_the_files_plugin_t(idaapi.plugin_t):
         addon.name = "Drop All The Files"
         addon.producer = "Milankovo"
         addon.url = "https://github.com/milankovo/ida-drop-all-the-files"
-        addon.version = "1.3.0"
+        addon.version = "1.4.0"
         idaapi.register_addon(addon)
 
         self.filter = None
